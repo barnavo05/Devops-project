@@ -67,3 +67,6 @@ Players take turns selecting squares on the board to place their symbol. The gam
 ## Contributions
 
 Contributions are welcome! Feel free to open an issue or submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
+
+## Contact
+If you have questions or problems, don't hesitate to contact us via the social media listed on [our profile page.](https://github.com/rizalfahlevi8)
