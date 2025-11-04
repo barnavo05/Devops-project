@@ -28,7 +28,7 @@ pipeline {
     stage('Build Docker image') {
       steps {
         // ✅ CHANGE #1: use new Dockerfile
-        sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} -f Dockerfile ."
+        sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} -f Dockerfile.dev ."
       }
     }
 
