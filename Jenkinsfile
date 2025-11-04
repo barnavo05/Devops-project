@@ -2,20 +2,20 @@ pipeline {
   agent any
 
   environment {
-    AWS_REGION  = 'us-east-1'
-    AWS_ACCOUNT = '288639564583'
-    ECR_REPO    = 'final-project' // lowercase only
-    ECR_URI     = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
-    INSTANCE_ID = 'i-01173d56ad0ebfc7c'
+    AWS_REGION   = 'us-east-1'
+    INSTANCE_ID  = 'i-01173d56ad0ebfc7c'
+    REPO_URL     = 'https://github.com/barnavo05/Devops-project.git'
+    APP_DIR      = '/opt/app/Devops-project'
+    CONTAINER    = 'react-container'
   }
 
+  // ⏱ Poll GitHub every 1 minute for changes
   triggers {
-    githubPush()
+    pollSCM('*/1 * * * *')   // Every 1 minute
   }
 
   stages {
-
-    stage('Checkout from GitHub') {
+    stage('Checkout') {
       steps {
         checkout scm
       }
@@ -30,30 +30,7 @@ pipeline {
       }
     }
 
-    stage('Build Docker Image') {
-      steps {
-        sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} -f Dockerfile.dev ."
-      }
-    }
-
-    stage('Push to ECR') {
-      steps {
-        withAWS(credentials: 'access-key', region: "${AWS_REGION}") {
-          sh '''
-            aws ecr describe-repositories --repository-names ${ECR_REPO} --region ${AWS_REGION} \
-              || aws ecr create-repository --repository-name ${ECR_REPO} --region ${AWS_REGION}
-
-            aws ecr get-login-password --region ${AWS_REGION} | \
-              docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-            docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}
-            docker push ${ECR_URI}:${IMAGE_TAG}
-          '''
-        }
-      }
-    }
-
-    stage('Deploy on EC2 via SSM') {
+    stage('Deploy to EC2 via SSM') {
       steps {
         withAWS(credentials: 'access-key', region: "${AWS_REGION}") {
           sh """
@@ -61,11 +38,15 @@ pipeline {
               --instance-ids ${INSTANCE_ID} \
               --document-name "AWS-RunShellScript" \
               --comment "Deploy React App" \
-              --parameters commands='[
-                "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URI}",
-                "docker pull ${ECR_URI}:${IMAGE_TAG}",
-                "docker rm -f react-container || true",
-                "docker run -d --name react-container -p 3000:80 ${ECR_URI}:${IMAGE_TAG}",
+              --parameters 'commands=[
+                "set -e",
+                "command -v git >/dev/null 2>&1 || (sudo yum -y install git)",
+                "mkdir -p /opt/app",
+                "cd /opt/app",
+                "if [ -d Devops-project ]; then cd Devops-project && git checkout main && git pull; else git clone ${REPO_URL}; cd Devops-project; fi",
+                "docker rm -f ${CONTAINER} || true",
+                "docker build -t react-app:${IMAGE_TAG} -f Dockerfile.dev .",
+                "docker run -d --restart unless-stopped --name ${CONTAINER} -p 3000:80 react-app:${IMAGE_TAG}",
                 "docker ps -a"
               ]'
           """
@@ -76,10 +57,10 @@ pipeline {
 
   post {
     success {
-      echo "✅ Successfully deployed ${ECR_URI}:${IMAGE_TAG} → EC2 Port 3000"
+      echo "✅ Successfully deployed commit ${IMAGE_TAG} on EC2 (port 3000)"
     }
     failure {
-      echo "❌ Deployment failed — check logs"
+      echo "❌ Deployment failed — check Jenkins logs or SSM output"
     }
   }
 }
