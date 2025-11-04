@@ -48,7 +48,8 @@ pipeline {
                 "docker build -t react-app:${IMAGE_TAG} -f Dockerfile.dev .",
                 "docker run -d --restart unless-stopped --name ${CONTAINER} -p 3000:80 react-app:${IMAGE_TAG}",
                 "docker ps -a"
-              ]'
+              ]' \
+              --output text
           """
         }
       }
