@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    AWS_REGION  = 'ap-south-1'
+    AWS_REGION  = 'us-east-1a'
     AWS_ACCOUNT = '288639564583'
     ECR_REPO    = 'final-project' // must be lowercase for ECR
     ECR_URI     = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
