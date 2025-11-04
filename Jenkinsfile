@@ -27,7 +27,8 @@ pipeline {
 
     stage('Build Docker image') {
       steps {
-        sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} -f Dockerfile.dev ."
+        // ✅ CHANGE #1: use new Dockerfile
+        sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} -f Dockerfile ."
       }
     }
 
@@ -60,7 +61,11 @@ pipeline {
                 \\"aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com\\",
                 \\"docker pull ${ECR_URI}:${IMAGE_TAG}\\",
                 \\"docker rm -f react-container || true\\",
-                \\"docker run -d --name react-container -p 3000:3000 -e HOST=0.0.0.0 -e PORT=3000 ${ECR_URI}:${IMAGE_TAG}\\"
+                
+                # ✅ CHANGE #2: expose container port 80 -> EC2 port 3000
+                \\"docker run -d --name react-container -p 3000:80 ${ECR_URI}:${IMAGE_TAG}\\",
+
+                \\"docker ps -a\\"
               ]"
           '''
         }
